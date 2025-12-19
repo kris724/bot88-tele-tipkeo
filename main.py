@@ -67,18 +67,16 @@ def mark_league_as_sent(sanitized_league_name):
     with CACHE_LOCK:
         expiry_time = datetime.now() + timedelta(seconds=CACHE_EXPIRY_SECONDS)
         SENT_LEAGUES_CACHE[sanitized_league_name] = expiry_time
-        print(f"-> Đã đánh dấu '{sanitized_league_name}' là đã gửi. Hết hạn: {expiry_time.strftime('%H:%M:%S')}")
 
 def capture_fixed_header(page, clip_rect, output_path):
     if clip_rect["width"] <= 0 or clip_rect["height"] <= 0:
-        print(" Clip Header cố định không hợp lệ.")
         return False
         
     try:
         page.screenshot(path=output_path, clip=clip_rect)
         return True
     except Exception as e:
-        print(f" Lỗi khi chụp Header cố định: {e}")
+        print(f" Lỗi khi chụp Header")
         return False
 
 def stitch_images(base_path, header_path, logo_path, output_path, logo_size, logo_pos):
@@ -104,13 +102,10 @@ def stitch_images(base_path, header_path, logo_path, output_path, logo_size, log
             stitched_img.paste(logo_img, logo_pos)
 
         stitched_img.save(output_path)
-        print(f" Đã ghép thành công và lưu tại: {output_path}")
         return True
     except FileNotFoundError as e:
-        print(f" Lỗi FileNotFoundError: {e}")
         return False
     except Exception as e:
-        print(f" Lỗi khi xử lý ảnh: {e}")
         return False
 
 def read_last_message_id():
@@ -171,7 +166,6 @@ def capture_and_stitch_core(p):
             time.sleep(0.3) 
             
             if is_league_already_sent(sanitized_name):
-                print(f"⚠️ Bỏ qua: Giải đấu '{league_name}' đã được gửi trong 24h qua.")
                 continue
 
             if any(m.lower() in league_name.lower() for m in MATCHES_TO_KEEP):
@@ -212,7 +206,6 @@ def capture_and_stitch_core(p):
                     all_boxes.append(box)
 
             if not all_boxes:
-                print(f"⚠ Bỏ qua {target_league_name}, không lấy được bounding box nào.")
                 return None
             
             x0 = min(b["x"] for b in all_boxes)
@@ -245,11 +238,9 @@ def capture_and_stitch_core(p):
             else:
                 return None
         else:
-            print("Bỏ qua chu kỳ: Không tìm thấy giải đấu nào để gửi (hoặc tất cả đã được gửi).")
             return None
 
     except Exception as e:
-        print(f"Lỗi trong Playwright Core: {e}")
         return None
     finally:
         if browser:
@@ -260,7 +251,6 @@ def capture_and_stitch_wrapper():
         with sync_playwright() as p:
             return capture_and_stitch_core(p)
     except Exception as e:
-        print(f"LỖI TRONG PLAYWRIGHT WRAPPER: {e}")
         return None
 
 async def send_to_telegram_periodically():
@@ -269,7 +259,6 @@ async def send_to_telegram_periodically():
     
     while True:
         start_time = time.time()
-        print(f"\n[{time.strftime('%H:%M:%S')}] Bắt đầu chu kỳ chụp ảnh...")
         final_image_path = None
         
         try:
@@ -287,15 +276,13 @@ async def send_to_telegram_periodically():
                         caption=CAPTION_TEXT, 
                         parse_mode='Markdown' 
                     )
-                print(f"Đã gửi ảnh thành công qua Telegram.")
                 
                 save_last_message_id(message.message_id)
                 
                 os.remove(final_image_path)
-                print(f"Đã xóa file cuối: {final_image_path}")
                 
             else:
-                print("Bỏ qua chu kỳ: Không tìm thấy giải đấu mới hoặc ảnh bị lỗi. Giữ tin cũ.")
+                print("Bỏ qua chu kỳ")
 
         except TelegramError as e:
             print(f"LỖI TELEGRAM: {e}")
@@ -311,7 +298,7 @@ async def send_to_telegram_periodically():
                 try:
                     os.remove(os.path.join(OUTPUT_DIR, temp_f))
                 except Exception as e:
-                    print(f"Lỗi khi xóa file tạm {temp_f}: {e}")
+                    print(f"Lỗi khi xóa file tạm")
                     
         end_time = time.time()
         elapsed_time = end_time - start_time
