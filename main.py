@@ -135,7 +135,6 @@ async def delete_last_message(bot, chat_id):
         try:
             await bot.delete_message(chat_id=chat_id, message_id=message_id)
         except TelegramError as e:
-            # Lỗi 400 Bad Request (Message to delete not found) là phổ biến và có thể bỏ qua
             if "message to delete not found" in str(e).lower() or "bad request: message can't be deleted" in str(e).lower():
             else:
                 print(f" Lỗi khi xóa tin nhắn Telegram: {e}")
